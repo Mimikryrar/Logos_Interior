@@ -77,16 +77,7 @@ export async function generateReimaginedImage(base64Image: string, stylePrompt: 
   }
 }
 
-export async function chatWithDesigner(
-  message: string,
-  history: { role: 'user' | 'model'; parts: { text: string }[] }[],
-  roomImage?: string
-) {
-  if (!API_KEY) throw new Error(API_KEY_ERROR);
-  const chat = ai.chats.create({
-    model: 'gemini-2.0-flash',
-    config: {
-      systemInstruction: `You are χρέομαι (Chreomai), an ancient-wisdom-inspired AI Interior Design Consultant. Your name means 'to consult the oracle' in ancient Greek. You combine timeless design principles — proportion, harmony, reason — with modern interior design expertise.
+const SYSTEM_INSTRUCTION = `You are χρέομαι (Chreomai), an ancient-wisdom-inspired AI Interior Design Consultant. Your name means 'to consult the oracle' in ancient Greek. You combine timeless design principles — proportion, harmony, reason — with modern interior design expertise.
 
 When a user uploads a room photo, always follow this structure:
 🔍 ANALYSIS: Describe the current style, colors, and strengths in 2-3 sentences.
@@ -94,11 +85,21 @@ When a user uploads a room photo, always follow this structure:
 🛒 PRODUCT PICKS: Suggest 2-3 real products with price range and where to buy (IKEA, West Elm, CB2, Article, Westwing).
 🎨 STYLE ALTERNATIVES: Briefly mention 2 alternative style directions that could work.
 
-Keep answers concise and inspiring. Ask about budget and style preferences if not provided. Always respond in the same language the user writes in.`,
-    },
-    history: history,
-  });
+Keep answers concise and inspiring. Ask about budget and style preferences if not provided. Always respond in the same language the user writes in.`;
 
+export function createDesignerChat() {
+  if (!API_KEY) throw new Error(API_KEY_ERROR);
+  return ai.chats.create({
+    model: 'gemini-2.0-flash',
+    config: { systemInstruction: SYSTEM_INSTRUCTION },
+  });
+}
+
+export async function sendMessageToChat(
+  chat: ReturnType<typeof createDesignerChat>,
+  message: string,
+  roomImage?: string
+) {
   const contents: any[] = [{ text: message }];
   if (roomImage) {
     const mimeType = roomImage.startsWith('data:')
@@ -111,7 +112,6 @@ Keep answers concise and inspiring. Ask about budget and style preferences if no
       },
     });
   }
-
   const response = await chat.sendMessage({ message: contents });
   return response.text;
 }

@@ -3,7 +3,7 @@ import { Send, User, Sparkles, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { chatWithDesigner } from '../services/geminiService';
+import { createDesignerChat, sendMessageToChat } from '../services/geminiService';
 
 interface Message {
   role: 'user' | 'model';
@@ -26,6 +26,7 @@ export default function ChatInterface({ roomImage, resetTrigger, className }: Ch
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<ReturnType<typeof createDesignerChat> | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -39,6 +40,7 @@ export default function ChatInterface({ roomImage, resetTrigger, className }: Ch
     if (resetTrigger === undefined) return;
     setMessages([INITIAL_MESSAGE]);
     setInput('');
+    chatRef.current = null;
   }, [resetTrigger]);
 
   const handleSend = async (e?: React.FormEvent) => {
@@ -51,12 +53,10 @@ export default function ChatInterface({ roomImage, resetTrigger, className }: Ch
     setIsLoading(true);
 
     try {
-      const history = messages.map(m => ({
-        role: m.role,
-        parts: [{ text: m.content }]
-      }));
-      
-      const response = await chatWithDesigner(userMessage, history, roomImage || undefined);
+      if (!chatRef.current) {
+        chatRef.current = createDesignerChat();
+      }
+      const response = await sendMessageToChat(chatRef.current, userMessage, roomImage || undefined);
       setMessages(prev => [...prev, { role: 'model', content: response || "I'm sorry, I couldn't generate a response." }]);
     } catch (error) {
       console.error('Chat error:', error);
