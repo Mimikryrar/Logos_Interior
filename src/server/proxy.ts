@@ -45,7 +45,7 @@ app.post('/api/generate-image', async (req, res) => {
   try {
     const ai = new GoogleGenAI({ apiKey: API_KEY });
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-preview-image-generation',
+      model: 'gemini-2.0-flash-exp-image-generation',
       contents: {
         parts: [
           { inlineData: { data: base64Image, mimeType: mimeType || 'image/jpeg' } },
