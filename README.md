@@ -22,13 +22,33 @@
 - Tailwind CSS + Framer Motion
 - Cormorant Garamond typography
 
+## Architecture
+
+λόγος uses a two-process architecture for security:
+
+- **Frontend** (Vite, port 3000) — React UI, never touches the API key
+- **Backend Proxy** (Express, port 3001) — holds the Gemini API key server-side, proxies all AI requests
+
+The Gemini API key is never exposed to the browser.
+
 ## Run Locally
 
 **Prerequisites:** Node.js
 
 1. Install dependencies: `npm install`
-2. Copy `.env.example` to `.env.local` and add your Gemini API key: `VITE_GEMINI_API_KEY=your_key`
-3. Run: `npm run dev`
+2. Copy `.env.server.example` to `.env.server` and add your Gemini API key:
+   ```
+   GEMINI_API_KEY=your_key_here
+   ```
+3. Start both frontend and backend with one command:
+   ```
+   npm run dev:all
+   ```
+   Or start them separately:
+   ```
+   npm run dev     # Frontend on http://localhost:3000
+   npm run server  # Proxy on http://localhost:3001
+   ```
 
 ---
 

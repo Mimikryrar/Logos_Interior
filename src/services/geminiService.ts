@@ -1,9 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-const API_KEY_ERROR = "VITE_GEMINI_API_KEY is not set. Please add it to your .env.local file.";
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export interface DesignStyle {
   id: string;
@@ -46,72 +41,41 @@ export const DESIGN_STYLES: DesignStyle[] = [
 ];
 
 export async function generateReimaginedImage(base64Image: string, stylePrompt: string, mimeType = 'image/jpeg'): Promise<string> {
-  if (!API_KEY) throw new Error(API_KEY_ERROR);
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-preview-image-generation',
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              data: base64Image.split(',')[1] || base64Image,
-              mimeType,
-            },
-          },
-          {
-            text: stylePrompt,
-          },
-        ],
-      },
-    });
-
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
-    }
-    throw new Error('No image generated');
-  } catch (error) {
-    console.error('Error generating reimagined image:', error);
-    throw error;
-  }
-}
-
-const SYSTEM_INSTRUCTION = `You are χρέομαι (Chreomai), an ancient-wisdom-inspired AI Interior Design Consultant. Your name means 'to consult the oracle' in ancient Greek. You combine timeless design principles — proportion, harmony, reason — with modern interior design expertise.
-
-When a user uploads a room photo, always follow this structure:
-🔍 ANALYSIS: Describe the current style, colors, and strengths in 2-3 sentences.
-✨ TOP 3 IMPROVEMENTS: List 3 specific, actionable improvements with reasoning (prioritized by impact vs. effort).
-🛒 PRODUCT PICKS: Suggest 2-3 real products with price range and where to buy (IKEA, West Elm, CB2, Article, Westwing).
-🎨 STYLE ALTERNATIVES: Briefly mention 2 alternative style directions that could work.
-
-Keep answers concise and inspiring. Ask about budget and style preferences if not provided. Always respond in the same language the user writes in.`;
-
-export function createDesignerChat() {
-  if (!API_KEY) throw new Error(API_KEY_ERROR);
-  return ai.chats.create({
-    model: 'gemini-2.0-flash',
-    config: { systemInstruction: SYSTEM_INSTRUCTION },
+  const res = await fetch(`${API_BASE}/api/generate-image`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      base64Image: base64Image.split(',')[1] || base64Image,
+      mimeType,
+      stylePrompt,
+    }),
   });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as any).error || `Server error ${res.status}`);
+  }
+
+  const { imageData } = await res.json();
+  return `data:image/png;base64,${imageData}`;
 }
 
-export async function sendMessageToChat(
-  chat: ReturnType<typeof createDesignerChat>,
+export async function chatWithDesigner(
   message: string,
+  history: { role: 'user' | 'model'; parts: { text: string }[] }[],
   roomImage?: string
-) {
-  const contents: any[] = [{ text: message }];
-  if (roomImage) {
-    const mimeType = roomImage.startsWith('data:')
-      ? roomImage.split(';')[0].split(':')[1]
-      : 'image/jpeg';
-    contents.push({
-      inlineData: {
-        data: roomImage.split(',')[1] || roomImage,
-        mimeType,
-      },
-    });
+): Promise<string> {
+  const res = await fetch(`${API_BASE}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, history, roomImage }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as any).error || `Server error ${res.status}`);
   }
-  const response = await chat.sendMessage({ message: contents });
-  return response.text;
+
+  const { response } = await res.json();
+  return response;
 }
