@@ -3,24 +3,57 @@ import { Upload, Image as ImageIcon, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
+const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_WIDTH = 1920;
+
 interface UploadZoneProps {
   value?: string | null;
   onUpload: (base64: string | null, mimeType?: string) => void;
   className?: string;
 }
 
-export default function UploadZone({ value, onUpload, className }: UploadZoneProps) {
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handleFile = useCallback((file: File) => {
-    if (!file.type.startsWith('image/')) return;
-
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const base64 = e.target?.result as string;
-      onUpload(base64, file.type);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Canvas context unavailable'));
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
     };
+    reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+export default function UploadZone({ value, onUpload, className }: UploadZoneProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [sizeError, setSizeError] = useState<string | null>(null);
+
+  const handleFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+
+    if (file.size > MAX_SIZE_BYTES) {
+      setSizeError('File too large. Please use an image under 10 MB.');
+      return;
+    }
+
+    setSizeError(null);
+    const compressed = await compressImage(file);
+    onUpload(compressed, 'image/jpeg');
   }, [onUpload]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -122,6 +155,10 @@ export default function UploadZone({ value, onUpload, className }: UploadZonePro
           </motion.div>
         )}
       </AnimatePresence>
+
+      {sizeError && (
+        <p className="text-sm text-red-500 mt-2 text-center">{sizeError}</p>
+      )}
     </div>
   );
 }

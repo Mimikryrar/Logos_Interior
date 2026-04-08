@@ -198,13 +198,23 @@ export default function App() {
                 </AnimatePresence>
 
                 {error && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex items-center gap-3"
+                    className="mt-4 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex flex-col gap-2"
                   >
-                    <RefreshCw className="w-4 h-4" />
-                    {error}
+                    <div className="flex items-center gap-3">
+                      <RefreshCw className="w-4 h-4 shrink-0" />
+                      {error}
+                    </div>
+                    {selectedStyle && (
+                      <button
+                        onClick={() => handleStyleSelect(selectedStyle)}
+                        className="self-start border border-red-200 px-4 py-2 text-sm hover:bg-red-100 transition-all rounded-lg mt-1"
+                      >
+                        Try again
+                      </button>
+                    )}
                   </motion.div>
                 )}
               </div>
