@@ -19,9 +19,10 @@ interface ChatInterfaceProps {
   roomImage?: string | null;
   resetTrigger?: number;
   className?: string;
+  apiKey?: string;
 }
 
-export default function ChatInterface({ roomImage, resetTrigger, className }: ChatInterfaceProps) {
+export default function ChatInterface({ roomImage, resetTrigger, className, apiKey = '' }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -55,7 +56,7 @@ export default function ChatInterface({ roomImage, resetTrigger, className }: Ch
         role: m.role,
         parts: [{ text: m.content }],
       }));
-      const response = await chatWithDesigner(userMessage, history, roomImage || undefined);
+      const response = await chatWithDesigner(userMessage, history, roomImage || undefined, apiKey);
       setMessages(prev => [...prev, { role: 'model', content: response || "I'm sorry, I couldn't generate a response." }]);
     } catch (error) {
       console.error('Chat error:', error);

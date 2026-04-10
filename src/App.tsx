@@ -6,9 +6,11 @@ import UploadZone from './components/UploadZone';
 import ComparisonSlider from './components/ComparisonSlider';
 import StyleCarousel from './components/StyleCarousel';
 import ChatInterface from './components/ChatInterface';
+import ApiKeySetup from './components/ApiKeySetup';
 import { DESIGN_STYLES, DesignStyle, generateReimaginedImage } from './services/geminiService';
 
 export default function App() {
+  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('logos-gemini-key') || '');
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [imageMimeType, setImageMimeType] = useState('image/jpeg');
   const [uploadCount, setUploadCount] = useState(0);
@@ -29,6 +31,15 @@ export default function App() {
     setError(null);
   }, []);
 
+  const changeApiKey = () => {
+    localStorage.removeItem('logos-gemini-key');
+    setApiKey('');
+  };
+
+  if (!apiKey) {
+    return <ApiKeySetup onKeySet={(key) => setApiKey(key)} />;
+  }
+
   const handleStyleSelect = async (style: DesignStyle) => {
     if (!originalImage || isGenerating) return;
     
@@ -38,7 +49,7 @@ export default function App() {
     setMobileTab('chat');
 
     try {
-      const result = await generateReimaginedImage(originalImage, style.prompt, imageMimeType);
+      const result = await generateReimaginedImage(originalImage, style.prompt, imageMimeType, apiKey);
       setReimaginedImage(result);
     } catch (err) {
       console.error('Generation error:', err);
@@ -73,13 +84,24 @@ export default function App() {
             <a href="#" className="text-sm font-medium transition-colors" style={{ color: 'rgba(255,255,255,0.6)' }} onMouseEnter={e => (e.currentTarget.style.color = '#fff')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')}>Pricing</a>
           </nav>
 
-          <button
-            onClick={reset}
-            className="text-xs font-semibold uppercase tracking-wider px-4 py-2 rounded-full border transition-all"
-            style={{ borderColor: '#d4af7a', color: '#d4af7a' }}
-          >
-            New Project
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            <button
+              onClick={reset}
+              className="text-xs font-semibold uppercase tracking-wider px-4 py-2 rounded-full border transition-all"
+              style={{ borderColor: '#d4af7a', color: '#d4af7a' }}
+            >
+              New Project
+            </button>
+            <button
+              onClick={changeApiKey}
+              className="text-[10px] transition-colors"
+              style={{ color: 'rgba(255,255,255,0.3)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.3)')}
+            >
+              Change API Key
+            </button>
+          </div>
         </div>
       </header>
 
@@ -248,7 +270,7 @@ export default function App() {
               </div>
               
               <div className="flex-1">
-                <ChatInterface roomImage={reimaginedImage || originalImage} resetTrigger={uploadCount} />
+                <ChatInterface roomImage={reimaginedImage || originalImage} resetTrigger={uploadCount} apiKey={apiKey} />
               </div>
 
               <div className="mt-6 p-6 rounded-2xl bg-accent/5 border border-accent/10">

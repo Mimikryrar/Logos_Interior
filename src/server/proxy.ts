@@ -5,7 +5,6 @@ import { GoogleGenAI } from '@google/genai';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const API_KEY = process.env.GEMINI_API_KEY || '';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 const SYSTEM_INSTRUCTION = `You are χρέομαι (Chreomai), an ancient-wisdom-inspired AI Interior Design Consultant. Your name means 'to consult the oracle' in ancient Greek. You combine timeless design principles — proportion, harmony, reason — with modern interior design expertise.
@@ -33,8 +32,9 @@ app.use(express.json({ limit: '25mb' }));
 
 // POST /api/generate-image
 app.post('/api/generate-image', async (req, res) => {
-  if (!API_KEY) {
-    return res.status(401).json({ error: 'GEMINI_API_KEY is not set on the server.' });
+  const apiKey = req.headers['x-gemini-key'] as string;
+  if (!apiKey) {
+    return res.status(401).json({ error: 'Missing x-gemini-key header.' });
   }
 
   const { base64Image, mimeType, stylePrompt } = req.body;
@@ -43,9 +43,10 @@ app.post('/api/generate-image', async (req, res) => {
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp-image-generation',
+      model: 'gemini-2.0-flash-preview-image-generation',
+      config: { responseModalities: ['TEXT', 'IMAGE'] },
       contents: {
         parts: [
           { inlineData: { data: base64Image, mimeType: mimeType || 'image/jpeg' } },
@@ -68,8 +69,9 @@ app.post('/api/generate-image', async (req, res) => {
 
 // POST /api/chat
 app.post('/api/chat', async (req, res) => {
-  if (!API_KEY) {
-    return res.status(401).json({ error: 'GEMINI_API_KEY is not set on the server.' });
+  const apiKey = req.headers['x-gemini-key'] as string;
+  if (!apiKey) {
+    return res.status(401).json({ error: 'Missing x-gemini-key header.' });
   }
 
   const { message, history, roomImage } = req.body;
@@ -78,7 +80,7 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const chat = ai.chats.create({
       model: 'gemini-2.0-flash',
       config: { systemInstruction: SYSTEM_INSTRUCTION },

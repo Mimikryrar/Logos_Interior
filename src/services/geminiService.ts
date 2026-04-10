@@ -42,10 +42,10 @@ export const DESIGN_STYLES: DesignStyle[] = [
   }
 ];
 
-export async function generateReimaginedImage(base64Image: string, stylePrompt: string, mimeType = 'image/jpeg'): Promise<string> {
+export async function generateReimaginedImage(base64Image: string, stylePrompt: string, mimeType = 'image/jpeg', apiKey = ''): Promise<string> {
   const res = await fetch(`${API_BASE}/api/generate-image`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-gemini-key': apiKey },
     body: JSON.stringify({
       base64Image: base64Image.split(',')[1] || base64Image,
       mimeType,
@@ -65,11 +65,12 @@ export async function generateReimaginedImage(base64Image: string, stylePrompt: 
 export async function chatWithDesigner(
   message: string,
   history: { role: 'user' | 'model'; parts: { text: string }[] }[],
-  roomImage?: string
+  roomImage?: string,
+  apiKey = ''
 ): Promise<string> {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-gemini-key': apiKey },
     body: JSON.stringify({ message, history, roomImage }),
   });
 
